@@ -1,4 +1,4 @@
-# IaC-Portfolio
+# IaC/DevOps-Portfolio
 This repository displays samples of work I've done in the DevOps world. Please take a look at some of the projects I've worked on. These projects were put together in my homelab, but I have completed similar work in a professional setting.
 
 Summary of each directory:
