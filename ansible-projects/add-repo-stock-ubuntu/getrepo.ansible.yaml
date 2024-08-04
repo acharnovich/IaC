@@ -1,0 +1,73 @@
+---
+# This playbook will add a repo to a stock ubuntu install
+# Install the desired package, set ip table rules (and saves them) then remove the temp-user and reboot
+#
+# prequisites I performed for this to work:
+# Installed ansible on a remote raspberry pi
+# created a temp-user on a stock ubuntu VM using virtualbox, added no passwd to suoders file for temp-user
+# created a ssh keypair from remote host with ansible and used ssh-copy-id to copy pub key to the ubunutu vm
+# created a inventory file with server and temp-user login info which used the ssh pub key.
+#
+# To run the playbook on my raspberry pi: ansible-playbook -i inventory_file getrepo.ansible.yaml
+#
+# Improvements I would make to this playbook for a full DevOps environment:
+# Create a jenkins/pipeline that would launch this playbook
+# In the jenkins pipeline I would connect it to a Git platporm to pull down the newest playbook with inventory
+# Add testing and analysis, Jenkins plugins such as sonarqube will do this
+# Add logging to the pipeline, something as simple as sending out email if it passes or fails with output
+# automated ssh-copy-id and host verification so it is not done manually for every new build.
+
+- name: Add Repo to Stock Ubuntu
+  hosts: test-server
+  become: yes
+  become_user: root
+
+  tasks:
+    - name: Add Repo 
+      apt_repository:
+        repo: "deb <URL of REPO> jammy main"
+        state: present
+      
+    - name: Install <package> package
+      apt: 
+        name: <package_name>
+        state: present
+    - name: Install iptables-persistent package
+      apt: 
+        name: iptables-persistent
+        state: present
+
+    - name: Add iptables to accept traffic from ip address over port 3000
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        source: x.x.x.x/x
+        destination_port: 3000
+        jump: ACCEPT
+
+    - name: Add iptables to accept traffic from ip address over 3000
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        source: <x.x.x.x/x>
+        destination_port: 3000
+        jump: ACCEPT 
+
+    - name: Reject all other traffic from 3000
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 3000
+        jump: REJECT
+        reject_with: icmp-port-unreachable
+
+    - name: Save iptables
+      command: netfilter-persistent save
+
+    - name: Remove temp-user
+      user:
+        name: temp-user
+        state: absent
+      
+    - name: Reboot system
+      reboot:     
